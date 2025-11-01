@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mini App Example</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  </head>
+  <body>
+    <h1>Привет, <span id="user"></span>!</h1>
+    <button id="close">Закрыть</button>
+
+    <script>
+      const tg = window.Telegram.WebApp;
+      tg.expand(); // раскрывает на весь экран
+      document.getElementById("user").textContent = tg.initDataUnsafe?.user?.first_name || "гость";
+
+      document.getElementById("close").addEventListener("click", () => {
+        tg.close();
+      });
+
+      bot.command("start", (ctx) => {
+        ctx.reply("Запусти мини-приложение!", {
+            reply_markup: {
+            inline_keyboard: [
+                [{ text: "Открыть Mini App", web_app: { url: "https://your-mini-app.vercel.app" } }],
+            ],
+            },
+        });
+        });
+
+    </script>
+  </body>
+</html>
