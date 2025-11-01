@@ -1,34 +1,203 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Mini App Example</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  </head>
-  <body>
-    <h1>Привет, <span id="user"></span>!</h1>
-    <button id="close">Закрыть</button>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Telegram Mini App — Пример</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #fff;
+      --muted: #6b7280;
+      --accent: #1f8ef1;
+      --danger: #e11d48;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body { height:100%; margin:0; background:var(--bg); }
+    .wrap {
+      max-width:720px;
+      margin:32px auto;
+      padding:20px;
+    }
+    .card {
+      background:var(--card);
+      border-radius:12px;
+      box-shadow:0 6px 18px rgba(20,20,40,0.06);
+      padding:20px;
+    }
+    h1 { margin:0 0 8px 0; font-size:20px; }
+    p.muted { color:var(--muted); margin:0 0 16px 0; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+    .info {
+      display:flex;
+      gap:12px;
+      align-items:center;
+      padding:12px;
+      border-radius:10px;
+      background:#fbfdff;
+      width:100%;
+    }
+    .avatar {
+      width:48px; height:48px; border-radius:12px; background:#eef6ff; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--accent);
+      font-size:18px;
+    }
+    .meta { display:flex; flex-direction:column; }
+    button, .btn {
+      appearance:none;
+      border:0;
+      background:var(--accent);
+      color:white;
+      padding:10px 14px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    .btn.ghost { background:transparent; color:var(--accent); border:1px solid rgba(31,142,241,0.12); }
+    .btn.danger { background:var(--danger); }
+    pre { background:#f8fafc; padding:12px; border-radius:8px; overflow:auto; }
+    footer { margin-top:16px; color:var(--muted); font-size:13px; text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Пример Telegram Mini App</h1>
+      <p class="muted">Интерактивный шаблон: получать имя, отправлять данные боту и закрывать WebApp.</p>
 
-    <script>
-      const tg = window.Telegram.WebApp;
-      tg.expand(); // раскрывает на весь экран
-      document.getElementById("user").textContent = tg.initDataUnsafe?.user?.first_name || "гость";
+      <div class="row">
+        <div class="info" id="userCard">
+          <div class="avatar" id="avatar">—</div>
+          <div class="meta">
+            <div id="fullname" style="font-weight:700">Гость</div>
+            <div id="username" style="color:var(--muted)">—</div>
+          </div>
+        </div>
+      </div>
 
-      document.getElementById("close").addEventListener("click", () => {
+      <div class="row">
+        <button id="sendBtn" class="btn">Отправить данные боту</button>
+        <button id="closeBtn" class="btn ghost">Закрыть</button>
+        <button id="mainBtnToggle" class="btn ghost">Показать/скрыть MainButton</button>
+        <button id="revealInit" class="btn ghost">Показать initData</button>
+      </div>
+
+      <div class="row">
+        <div style="flex:1;">
+          <label style="display:block; font-weight:600; margin-bottom:6px;">Сообщение (будет отправлено боту):</label>
+          <textarea id="payload" style="width:100%; min-height:84px; padding:10px; border-radius:8px; border:1px solid #eef2f7;">{"action":"purchase","item":"demo_pack","price":49}</textarea>
+        </div>
+      </div>
+
+      <div class="row">
+        <details style="width:100%;">
+          <summary style="cursor:pointer; padding:8px 12px; border-radius:8px; background:#fbfdff;">Отладочная информация</summary>
+          <div style="padding:12px;">
+            <div><strong>isClosed:</strong> <span id="isClosed">false</span></div>
+            <div style="margin-top:8px;"><strong>initData (unsafe):</strong></div>
+            <pre id="initData">—</pre>
+          </div>
+        </details>
+      </div>
+
+      <footer>Подключай URL к кнопке бота как <code>web_app</code>. Токен бота в коде не нужен.</footer>
+    </div>
+  </div>
+
+  <script>
+    // Telegram WebApp SDK
+    const tg = window.Telegram?.WebApp;
+
+    if (!tg) {
+      // Если открыто не из Telegram — показываем предупреждение
+      document.getElementById('fullname').textContent = 'Открыто не из Telegram';
+      document.getElementById('username').textContent = 'Запусти через бота / Web App';
+      document.getElementById('avatar').textContent = '🚫';
+      document.getElementById('initData').textContent = 'telegram-web-app.js не найден или WebApp не инициализирован.';
+      document.getElementById('sendBtn').disabled = true;
+      document.getElementById('mainBtnToggle').disabled = true;
+      document.getElementById('closeBtn').addEventListener('click', () => window.close());
+    } else {
+      // Инициализация
+      tg.expand(); // разворачиваем приложение при открытии
+      const user = tg.initDataUnsafe?.user || null;
+      document.getElementById('initData').textContent = JSON.stringify(tg.initDataUnsafe, null, 2);
+
+      // Заполняем информацию о пользователе
+      if (user) {
+        const name = [user.first_name, user.last_name].filter(Boolean).join(' ');
+        document.getElementById('fullname').textContent = name || 'Пользователь Telegram';
+        document.getElementById('username').textContent = user.username ? '@' + user.username : 'без username';
+        document.getElementById('avatar').textContent = (user.first_name || 'U').slice(0,1).toUpperCase();
+      } else {
+        document.getElementById('fullname').textContent = 'Гость';
+        document.getElementById('username').textContent = 'Нет данных';
+        document.getElementById('avatar').textContent = 'G';
+      }
+
+      // Отслеживаем закрытие (для отладки)
+      tg.onEvent('mainButtonClicked', () => {
+        // main button может быть настроен — тут пример обработки
+        // (в этом шаблоне мы не используем отдельную отправку с основ. кнопки)
+        console.log('MainButton clicked');
+      });
+
+      // Кнопка "Отправить данные боту"
+      document.getElementById('sendBtn').addEventListener('click', () => {
+        let raw = document.getElementById('payload').value;
+        let safe;
+        try {
+          safe = JSON.parse(raw);
+        } catch (e) {
+          alert('Невалидный JSON в поле payload. Исправь, пожалуйста.');
+          return;
+        }
+
+        // Дополняем информацией о пользователе (по желанию)
+        const packageToSend = {
+          webapp_action: 'user_event',
+          user: tg.initDataUnsafe?.user || null,
+          payload: safe,
+          ts: Date.now(),
+        };
+
+        // Отправляем данные боту: бот получит update.message.web_app_data.data (строка)
+        tg.sendData(JSON.stringify(packageToSend));
+        // Для UX можно закрыть WebApp (необязательно)
         tg.close();
       });
 
-      bot.command("start", (ctx) => {
-        ctx.reply("Запусти мини-приложение!", {
-            reply_markup: {
-            inline_keyboard: [
-                [{ text: "Открыть Mini App", web_app: { url: "https://miniapp-demo-navy.vercel.app/" } }],
-            ],
-            },
-        });
-        });
+      // Кнопка закрыть
+      document.getElementById('closeBtn').addEventListener('click', () => tg.close());
 
-    </script>
-  </body>
+      // Показ/скрытие MainButton (нижняя нативная кнопка Telegram)
+      let mainShown = false;
+      const mainToggle = document.getElementById('mainBtnToggle');
+      mainToggle.addEventListener('click', () => {
+        if (!mainShown) {
+          tg.MainButton.setText('Купить — 49');
+          tg.MainButton.show();
+          mainShown = true;
+        } else {
+          tg.MainButton.hide();
+          mainShown = false;
+        }
+      });
+
+      // Кнопка initData для отладки
+      document.getElementById('revealInit').addEventListener('click', () => {
+        document.getElementById('initData').textContent = JSON.stringify(tg.initDataUnsafe, null, 2);
+        document.getElementById('isClosed').textContent = tg.isClosed ? 'true' : 'false';
+      });
+
+      // Обновляем initData в момент загрузки
+      document.getElementById('initData').textContent = JSON.stringify(tg.initDataUnsafe, null, 2);
+      document.getElementById('isClosed').textContent = tg.isClosed ? 'true' : 'false';
+    }
+
+    // Небольшая подсказка: как бот получает эти данные
+    // На стороне бота — в обработчике сообщений проверяй message.web_app_data.data
+    // (это строка — JSON, который мы отправили через tg.sendData)
+  </script>
+</body>
 </html>
-
